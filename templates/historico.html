@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+  <h4>Histórico de cierres mensuales</h4>
+  <table class="table table-striped mt-3">
+    <thead><tr><th>Mes</th><th>Año</th><th>Ingresos ARS</th><th>Gastos ARS</th><th>Saldo ARS</th><th>Ingresos USD</th><th>Gastos USD</th><th>Saldo USD</th><th>Acciones</th></tr></thead>
+    <tbody>
+      {% for c in cierres %}
+      <tr>
+        <td>{{ c.mes }}</td><td>{{ c.anio }}</td>
+        <td>{{ '%.2f'|format(c.total_ingresos_ars) }}</td><td>{{ '%.2f'|format(c.total_gastos_ars) }}</td><td>{{ '%.2f'|format(c.saldo_ars) }}</td>
+        <td>{{ '%.2f'|format(c.total_ingresos_usd) }}</td><td>{{ '%.2f'|format(c.total_gastos_usd) }}</td><td>{{ '%.2f'|format(c.saldo_usd) }}</td>
+        <td>
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('exportar_mes') }}?mes={{ c.mes }}&anio={{ c.anio }}">CSV</a>
+          <a class="btn btn-sm btn-success" href="{{ url_for('exportar_excel', mes=c.mes, anio=c.anio) }}">Excel</a>
+          <form action="{{ url_for('reabrir_mes', id=c.id) }}" method="post" style="display:inline;">
+            <button type="submit" class="btn btn-sm btn-warning">Reabrir</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="text-center">No hay cierres aún.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
