@@ -1,10 +1,38 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, send_file, abort
+from flask import Flask, render_template, redirect, url_for, flash, request, send_file, abort, Response
 from models import get_engine, get_session, init_db, Movimiento, CierreMensual
 from forms import MovimientoForm
 from sqlalchemy import func
 from datetime import datetime
 import io, csv
 from openpyxl import Workbook
+from functools import wraps
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # Carga variables desde .env
+
+ALLOWED_WRITE_IPS = os.getenv("ALLOWED_WRITE_IPS", "")
+# Convertimos la cadena en set de IPs
+ALLOWED_WRITE_IPS = set(ip.strip() for ip in ALLOWED_WRITE_IPS.split(",") if ip.strip())
+
+def is_mobile():
+    ua = request.headers.get('User-Agent','').lower()
+    return 'mobile' in ua or 'android' in ua or 'iphone' in ua
+
+def requires_write_permission(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if request.method == "GET":
+            return f(*args, **kwargs)
+
+        client_ip = request.remote_addr
+        if client_ip in ALLOWED_WRITE_IPS and not is_mobile():
+            return f(*args, **kwargs)
+
+        return Response('No tiene permisos para modificar', 401)
+    return decorated
+
+
 
 # ----------------- BACKUP AUTOMÁTICO -----------------
 import os
@@ -71,6 +99,7 @@ def index():
                            cierres=cierres, mes_actual=mes_actual, anio_actual=anio_actual)
 
 @app.route('/nuevo', methods=['GET','POST'])
+@requires_write_permission
 def nuevo():
     form = MovimientoForm()
     if form.validate_on_submit():
@@ -99,6 +128,7 @@ def nuevo():
     return render_template('nuevo.html', form=form)
 
 @app.route('/cerrar_mes', methods=['POST'])
+@requires_write_permission
 def cerrar_mes():
     try:
         mes = int(request.form.get('mes'))
@@ -130,6 +160,7 @@ def historico():
     return render_template('historico.html', cierres=cierres)
 
 @app.route('/reabrir_mes/<int:id>', methods=['POST'])
+@requires_write_permission
 def reabrir_mes(id):
     cierre = db.query(CierreMensual).get(id)
     if not cierre:

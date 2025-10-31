@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
   <h4>Histórico de cierres mensuales</h4>
-  <table class="table table-striped mt-3">
+  <table class="table table-striped mt-3" class="table-responsive">
     <thead><tr><th>Mes</th><th>Año</th><th>Ingresos ARS</th><th>Gastos ARS</th><th>Saldo ARS</th><th>Ingresos USD</th><th>Gastos USD</th><th>Saldo USD</th><th>Acciones</th></tr></thead>
     <tbody>
       {% for c in cierres %}
