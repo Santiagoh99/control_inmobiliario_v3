@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import os
@@ -9,14 +9,14 @@ class Movimiento(Base):
     __tablename__ = "movimientos"
     id = Column(Integer, primary_key=True)
     fecha = Column(DateTime, default=datetime.utcnow)
-    tipo = Column(String(10), nullable=False)  # ingreso o gasto
+    tipo = Column(String(10), nullable=False)
     descripcion = Column(String(300), nullable=True)
     monto = Column(Float, nullable=False)
-    moneda = Column(String(3), nullable=False, default='ARS')  # ARS o USD
-    medio_pago = Column(String(50), nullable=True)  # Efectivo, MercadoPago, etc.
+    moneda = Column(String(3), nullable=False, default='ARS')
+    medio_pago = Column(String(50), nullable=True)
     mes = Column(Integer, nullable=False)
     anio = Column(Integer, nullable=False)
-    cerrado = Column(Boolean, default=False)  # si el movimiento pertenece a un mes cerrado
+    cerrado = Column(Boolean, default=False)
 
 class CierreMensual(Base):
     __tablename__ = "cierres_mensuales"

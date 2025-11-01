@@ -10,10 +10,10 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
       <div class="container">
-        <a class="navbar-brand" href="{{ url_for('index') }}">🏠 Control Inmobiliario v3</a>
+        <a class="navbar-brand" href="{{ url_for('movimientos.index') }}">🏠 Control Inmobiliario v3</a>
         <div class="d-flex gap-2">
-          <a class="btn btn-light btn-sm" href="{{ url_for('nuevo') }}">➕ Nuevo</a>
-          <a class="btn btn-outline-light btn-sm" href="{{ url_for('historico') }}">📚 Histórico</a>
+          <a class="btn btn-light btn-sm" href="{{ url_for('movimientos.nuevo') }}">➕ Nuevo</a>
+          <a class="btn btn-outline-light btn-sm" href="{{ url_for('movimientos.historico') }}">📚 Histórico</a>
         </div>
       </div>
     </nav>

@@ -10,9 +10,9 @@
         <td>{{ '%.2f'|format(c.total_ingresos_ars) }}</td><td>{{ '%.2f'|format(c.total_gastos_ars) }}</td><td>{{ '%.2f'|format(c.saldo_ars) }}</td>
         <td>{{ '%.2f'|format(c.total_ingresos_usd) }}</td><td>{{ '%.2f'|format(c.total_gastos_usd) }}</td><td>{{ '%.2f'|format(c.saldo_usd) }}</td>
         <td>
-          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('exportar_mes') }}?mes={{ c.mes }}&anio={{ c.anio }}">CSV</a>
-          <a class="btn btn-sm btn-success" href="{{ url_for('exportar_excel', mes=c.mes, anio=c.anio) }}">Excel</a>
-          <form action="{{ url_for('reabrir_mes', id=c.id) }}" method="post" style="display:inline;">
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('movimientos.exportar_mes') }}?mes={{ c.mes }}&anio={{ c.anio }}">CSV</a>
+          <a class="btn btn-sm btn-success" href="{{ url_for('movimientos.exportar_excel', mes=c.mes, anio=c.anio) }}">Excel</a>
+          <form action="{{ url_for('movimientos.reabrir_mes', id=c.id) }}" method="post" style="display:inline;">
             <button type="submit" class="btn btn-sm btn-warning">Reabrir</button>
           </form>
         </td>
