@@ -1,3 +1,5 @@
 .env
 __pycache__/
 *.pyc
+data/
+inmo_v3.db
