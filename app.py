@@ -3,63 +3,84 @@ from models import get_engine, get_session, init_db, Movimiento, CierreMensual
 from forms import MovimientoForm
 from sqlalchemy import func
 from datetime import datetime
-import io, csv
+import io, csv, os
 from openpyxl import Workbook
 from functools import wraps
 from dotenv import load_dotenv
-import os
-import shutil
-import sqlite3
 
-load_dotenv()  # Carga variables desde .env
+# --- Carga de variables desde .env ---
+load_dotenv()
 
-ALLOWED_WRITE_IPS = os.getenv("ALLOWED_WRITE_IPS", "")
-# Convertimos la cadena en set de IPs
-ALLOWED_WRITE_IPS = set(ip.strip() for ip in ALLOWED_WRITE_IPS.split(",") if ip.strip())
-
-def is_mobile():
-    ua = request.headers.get('User-Agent','').lower()
-    return 'mobile' in ua or 'android' in ua or 'iphone' in ua
-
-def requires_write_permission(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if request.method == "GET":
-            return f(*args, **kwargs)
-
-        client_ip = request.remote_addr
-        if client_ip in ALLOWED_WRITE_IPS and not is_mobile():
-            return f(*args, **kwargs)
-
-        return Response('No tiene permisos para modificar', 401)
-    return decorated
-
+# --- Configuración de Flask ---
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'cambiame_por_una_clave_segura'
+app.config['SECRET_KEY'] = os.getenv("FLASK_SECRET_KEY", "clave_insegura_default")
 
-engine = get_engine()
+# --- Base de datos ---
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/inmo_v3.db")
+
+engine = get_engine()  # usa la ruta por defecto
 init_db(engine)
 db = get_session(engine)
 
+# --- Funciones auxiliares ---
 def get_current_month_year():
     now = datetime.now()
     return now.month, now.year
 
+
+# --- Rutas principales ---
 @app.route('/')
 def index():
     mes_actual, anio_actual = get_current_month_year()
-    movimientos = db.query(Movimiento).filter(Movimiento.mes==mes_actual, Movimiento.anio==anio_actual).order_by(Movimiento.fecha.desc()).all()
-    ingresos_ars = db.query(func.coalesce(func.sum(Movimiento.monto).filter(Movimiento.tipo=='ingreso', Movimiento.moneda=='ARS', Movimiento.mes==mes_actual, Movimiento.anio==anio_actual),0)).scalar() or 0
-    gastos_ars = db.query(func.coalesce(func.sum(Movimiento.monto).filter(Movimiento.tipo=='gasto', Movimiento.moneda=='ARS', Movimiento.mes==mes_actual, Movimiento.anio==anio_actual),0)).scalar() or 0
-    ingresos_usd = db.query(func.coalesce(func.sum(Movimiento.monto).filter(Movimiento.tipo=='ingreso', Movimiento.moneda=='USD', Movimiento.mes==mes_actual, Movimiento.anio==anio_actual),0)).scalar() or 0
-    gastos_usd = db.query(func.coalesce(func.sum(Movimiento.monto).filter(Movimiento.tipo=='gasto', Movimiento.moneda=='USD', Movimiento.mes==mes_actual, Movimiento.anio==anio_actual),0)).scalar() or 0
 
-    ingresos_ars_anio = db.query(func.coalesce(func.sum(Movimiento.monto).filter(Movimiento.tipo=='ingreso', Movimiento.moneda=='ARS', Movimiento.anio==anio_actual),0)).scalar() or 0
-    gastos_ars_anio = db.query(func.coalesce(func.sum(Movimiento.monto).filter(Movimiento.tipo=='gasto', Movimiento.moneda=='ARS', Movimiento.anio==anio_actual),0)).scalar() or 0
-    ingresos_usd_anio = db.query(func.coalesce(func.sum(Movimiento.monto).filter(Movimiento.tipo=='ingreso', Movimiento.moneda=='USD', Movimiento.anio==anio_actual),0)).scalar() or 0
-    gastos_usd_anio = db.query(func.coalesce(func.sum(Movimiento.monto).filter(Movimiento.tipo=='gasto', Movimiento.moneda=='USD', Movimiento.anio==anio_actual),0)).scalar() or 0
+    movimientos = db.query(Movimiento).filter(
+        Movimiento.mes == mes_actual, Movimiento.anio == anio_actual
+    ).order_by(Movimiento.fecha.desc()).all()
 
-    cierres = db.query(CierreMensual).order_by(CierreMensual.anio.desc(), CierreMensual.mes.desc()).limit(12).all()
+    ingresos_ars = db.query(func.sum(Movimiento.monto)).filter(
+        Movimiento.tipo == 'ingreso', Movimiento.moneda == 'ARS',
+        Movimiento.mes == mes_actual, Movimiento.anio == anio_actual
+    ).scalar() or 0
+
+    gastos_ars = db.query(func.sum(Movimiento.monto)).filter(
+        Movimiento.tipo == 'gasto', Movimiento.moneda == 'ARS',
+        Movimiento.mes == mes_actual, Movimiento.anio == anio_actual
+    ).scalar() or 0
+
+    ingresos_usd = db.query(func.sum(Movimiento.monto)).filter(
+        Movimiento.tipo == 'ingreso', Movimiento.moneda == 'USD',
+        Movimiento.mes == mes_actual, Movimiento.anio == anio_actual
+    ).scalar() or 0
+
+    gastos_usd = db.query(func.sum(Movimiento.monto)).filter(
+        Movimiento.tipo == 'gasto', Movimiento.moneda == 'USD',
+        Movimiento.mes == mes_actual, Movimiento.anio == anio_actual
+    ).scalar() or 0
+
+    ingresos_ars_anio = db.query(func.sum(Movimiento.monto)).filter(
+        Movimiento.tipo == 'ingreso', Movimiento.moneda == 'ARS',
+        Movimiento.anio == anio_actual
+    ).scalar() or 0
+
+    gastos_ars_anio = db.query(func.sum(Movimiento.monto)).filter(
+        Movimiento.tipo == 'gasto', Movimiento.moneda == 'ARS',
+        Movimiento.anio == anio_actual
+    ).scalar() or 0
+
+    ingresos_usd_anio = db.query(func.sum(Movimiento.monto)).filter(
+        Movimiento.tipo == 'ingreso', Movimiento.moneda == 'USD',
+        Movimiento.anio == anio_actual
+    ).scalar() or 0
+
+    gastos_usd_anio = db.query(func.sum(Movimiento.monto)).filter(
+        Movimiento.tipo == 'gasto', Movimiento.moneda == 'USD',
+        Movimiento.anio == anio_actual
+    ).scalar() or 0
+
+    cierres = db.query(CierreMensual).order_by(
+        CierreMensual.anio.desc(), CierreMensual.mes.desc()
+    ).limit(12).all()
+
     return render_template('index.html', movimientos=movimientos,
                            ingresos_ars=ingresos_ars, gastos_ars=gastos_ars,
                            ingresos_usd=ingresos_usd, gastos_usd=gastos_usd,
@@ -67,36 +88,34 @@ def index():
                            ingresos_usd_anio=ingresos_usd_anio, gastos_usd_anio=gastos_usd_anio,
                            cierres=cierres, mes_actual=mes_actual, anio_actual=anio_actual)
 
-@app.route('/nuevo', methods=['GET','POST'])
-@requires_write_permission
+# --- Crear movimiento ---
+@app.route('/nuevo', methods=['GET', 'POST'])
 def nuevo():
     form = MovimientoForm()
     if form.validate_on_submit():
         fecha = form.fecha.data or datetime.now().date()
         mes = fecha.month
         anio = fecha.year
+
         mov = Movimiento(
-            fecha = datetime.combine(fecha, datetime.now().time()),
-            tipo = form.tipo.data,
-            descripcion = form.descripcion.data,
-            monto = float(form.monto.data),
-            moneda = form.moneda.data,
-            medio_pago = form.medio_pago.data,
-            mes = mes,
-            anio = anio
+            fecha=datetime.combine(fecha, datetime.now().time()),
+            tipo=form.tipo.data,
+            descripcion=form.descripcion.data,
+            monto=float(form.monto.data),
+            moneda=form.moneda.data,
+            medio_pago=form.medio_pago.data,
+            mes=mes,
+            anio=anio
         )
         db.add(mov)
         db.commit()
-
-        # --- Llamada a backup automático ---
-  
-        flash('Movimiento guardado','success')
+        flash('Movimiento guardado', 'success')
         return redirect(url_for('index'))
+
     form.fecha.data = datetime.now().date()
     return render_template('nuevo.html', form=form)
 
 @app.route('/editar/<int:id>', methods=['GET', 'POST'])
-@requires_write_permission
 def editar(id):
     mov = db.query(Movimiento).get(id)
     if not mov:
@@ -121,7 +140,6 @@ def editar(id):
 
 
 @app.route('/eliminar/<int:id>', methods=['POST'])
-@requires_write_permission
 def eliminar(id):
     mov = db.query(Movimiento).get(id)
     if not mov:
@@ -135,7 +153,6 @@ def eliminar(id):
 
 
 @app.route('/cerrar_mes', methods=['POST'])
-@requires_write_permission
 def cerrar_mes():
     try:
         mes = int(request.form.get('mes'))
@@ -167,7 +184,6 @@ def historico():
     return render_template('historico.html', cierres=cierres)
 
 @app.route('/reabrir_mes/<int:id>', methods=['POST'])
-@requires_write_permission
 def reabrir_mes(id):
     cierre = db.query(CierreMensual).get(id)
     if not cierre:
