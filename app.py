@@ -8,6 +8,8 @@ from openpyxl import Workbook
 from functools import wraps
 from dotenv import load_dotenv
 import os
+import shutil
+import sqlite3
 
 load_dotenv()  # Carga variables desde .env
 
@@ -31,39 +33,6 @@ def requires_write_permission(f):
 
         return Response('No tiene permisos para modificar', 401)
     return decorated
-
-
-
-# ----------------- BACKUP AUTOMÁTICO -----------------
-import os
-import shutil
-import sqlite3
-import datetime
-
-DB_PATH = "control_inmobiliario.db"
-BACKUP_DIR = "backups"
-MAX_REGISTROS = 5000  # generar backup cada 5000 movimientos
-MAX_MB = 5             # generar backup si DB > 5 MB
-
-os.makedirs(BACKUP_DIR, exist_ok=True)
-
-def check_backup():
-    # Contar registros
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM movimientos")
-    total = cur.fetchone()[0]
-    conn.close()
-
-    # Tamaño DB
-    size_mb = os.path.getsize(DB_PATH) / (1024 * 1024)
-
-    # Condición para backup
-    if total >= MAX_REGISTROS or size_mb >= MAX_MB:
-        fecha = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_path = os.path.join(BACKUP_DIR, f"backup_{fecha}.db")
-        shutil.copy2(DB_PATH, backup_path)
-        print(f"[BACKUP] Se generó backup automático: {backup_path}")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'cambiame_por_una_clave_segura'
@@ -120,12 +89,50 @@ def nuevo():
         db.commit()
 
         # --- Llamada a backup automático ---
-        check_backup()
-
+  
         flash('Movimiento guardado','success')
         return redirect(url_for('index'))
     form.fecha.data = datetime.now().date()
     return render_template('nuevo.html', form=form)
+
+@app.route('/editar/<int:id>', methods=['GET', 'POST'])
+@requires_write_permission
+def editar(id):
+    mov = db.query(Movimiento).get(id)
+    if not mov:
+        flash('Movimiento no encontrado', 'danger')
+        return redirect(url_for('index'))
+
+    form = MovimientoForm(obj=mov)
+    if form.validate_on_submit():
+        mov.tipo = form.tipo.data
+        mov.descripcion = form.descripcion.data
+        mov.monto = float(form.monto.data)
+        mov.moneda = form.moneda.data
+        mov.medio_pago = form.medio_pago.data
+        mov.fecha = form.fecha.data or datetime.now().date()
+        mov.mes = mov.fecha.month
+        mov.anio = mov.fecha.year
+        db.commit()
+        flash('Movimiento actualizado correctamente', 'success')
+        return redirect(url_for('index'))
+
+    return render_template('nuevo.html', form=form, editar=True)
+
+
+@app.route('/eliminar/<int:id>', methods=['POST'])
+@requires_write_permission
+def eliminar(id):
+    mov = db.query(Movimiento).get(id)
+    if not mov:
+        flash('Movimiento no encontrado', 'danger')
+        return redirect(url_for('index'))
+
+    db.delete(mov)
+    db.commit()
+    flash('Movimiento eliminado correctamente', 'info')
+    return redirect(url_for('index'))
+
 
 @app.route('/cerrar_mes', methods=['POST'])
 @requires_write_permission
@@ -207,5 +214,5 @@ def exportar_excel(mes, anio):
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 if __name__ == '__main__':
-    print('Iniciando Control Inmobiliario v3 - abrir http://127.0.0.1:5000 manualmente en tu navegador')
+    print('Iniciando Control Inmobiliario v3 - abrir http://127.0.0.1:5001 manualmente en tu navegador')
     app.run(host='0.0.0.0', port=5001, debug=True)

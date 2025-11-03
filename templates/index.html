@@ -47,23 +47,32 @@
 </div>
 
 <table class="table table-striped mt-3">
-  <thead class="table-light">
-    <tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Monto</th><th>Moneda</th><th>Medio</th></tr>
-  </thead>
-  <tbody>
-    {% for m in movimientos %}
-    <tr>
-      <td>{{ m.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
-      <td>{{ m.tipo }}</td>
-      <td>{{ m.descripcion }}</td>
-      <td>${{ '%.2f'|format(m.monto) }}</td>
-      <td>{{ m.moneda }}</td>
-      <td>{{ m.medio_pago }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="6" class="text-center">No hay movimientos este mes.</td></tr>
-    {% endfor %}
-  </tbody>
+ <thead class="table-light">
+  <tr>
+    <th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Monto</th>
+    <th>Moneda</th><th>Medio</th><th>Acciones</th>
+  </tr>
+</thead>
+<tbody>
+  {% for m in movimientos %}
+  <tr>
+    <td>{{ m.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+    <td>{{ m.tipo }}</td>
+    <td>{{ m.descripcion }}</td>
+    <td>${{ '%.2f'|format(m.monto) }}</td>
+    <td>{{ m.moneda }}</td>
+    <td>{{ m.medio_pago }}</td>
+    <td>
+      <a href="{{ url_for('editar', id=m.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+      <form action="{{ url_for('eliminar', id=m.id) }}" method="post" style="display:inline;">
+        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro que deseas eliminar este movimiento?');">Eliminar</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7" class="text-center">No hay movimientos este mes.</td></tr>
+  {% endfor %}
+</tbody>
 </table>
 
 <h6>Últimos cierres</h6>
