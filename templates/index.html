@@ -1,84 +1,83 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row g-3">
-  <div class="col-md-3">
-    <div class="card p-3 shadow-sm">
-      <h6>Ingresos (Mes)</h6>
-      <div><span class="badge badge-ars">ARS</span> ${{ ingresos_ars|round(2) }}</div>
-      <div><span class="badge badge-usd">USD</span> ${{ ingresos_usd|round(2) }}</div>
+<h1>Movimientos del Mes</h1>
+<div class="row">
+    <div class="col-md-6">
+        <h4>Totales</h4>
+        <p>Ingresos ARS: ${{ totales.ingresos_ars }}</p>
+        <p>Gastos ARS: ${{ totales.gastos_ars }}</p>
     </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card p-3 shadow-sm">
-      <h6>Gastos (Mes)</h6>
-      <div><span class="badge badge-ars">ARS</span> ${{ gastos_ars|round(2) }}</div>
-      <div><span class="badge badge-usd">USD</span> ${{ gastos_usd|round(2) }}</div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevoModal">➕ Nuevo Movimiento</button>
     </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card p-3 shadow-sm">
-      <h6>Balance (Mes)</h6>
-      <div><span class="badge badge-ars">ARS</span> ${{ (ingresos_ars-gastos_ars)|round(2) }}</div>
-      <div><span class="badge badge-usd">USD</span> ${{ (ingresos_usd-gastos_usd)|round(2) }}</div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card p-3 shadow-sm">
-      <h6>Totales (Año)</h6>
-      <div>ARS Ingresos: ${{ ingresos_ars_anio|round(2) }}</div>
-      <div>ARS Gastos: ${{ gastos_ars_anio|round(2) }}</div>
-      <div>USD Ingresos: ${{ ingresos_usd_anio|round(2) }}</div>
-      <div>USD Gastos: ${{ gastos_usd_anio|round(2) }}</div>
-    </div>
-  </div>
 </div>
 
-<div class="mt-4 d-flex justify-content-between">
-  <h5>Movimientos - Mes {{ mes_actual }}/{{ anio_actual }}</h5>
-  <div class="d-flex gap-2">
-    <form method="post" action="{{ url_for('movimientos.cerrar_mes') }}">
-      <input type="hidden" name="mes" value="{{ mes_actual }}"/>
-      <input type="hidden" name="anio" value="{{ anio_actual }}"/>
-      <button class="btn btn-warning btn-sm" type="submit">Cerrar mes</button>
-    </form>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('movimientos.exportar_mes') }}?mes={{ mes_actual }}&anio={{ anio_actual }}">Exportar CSV</a>
-    <a class="btn btn-success btn-sm" href="{{ url_for('movimientos.exportar_excel', mes=mes_actual, anio=anio_actual) }}">Exportar Excel</a>
-  </div>
+<table class="table table-striped mt-4">
+    <thead>
+        <tr>
+            <th>Descripción</th>
+            <th>Monto</th>
+            <th>Tipo</th>
+            <th>Moneda</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for movimiento in movimientos %}
+        <tr>
+            <td>{{ movimiento.descripcion }}</td>
+            <td>${{ movimiento.monto }}</td>
+            <td>{{ movimiento.tipo }}</td>
+            <td>{{ movimiento.moneda }}</td>
+            <td>
+                <form method="POST" action="{{ url_for('movimientos.eliminar', id=movimiento.id) }}" style="display:inline;">
+                    <button class="btn btn-danger btn-sm">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal para Nuevo Movimiento -->
+<div class="modal fade" id="nuevoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('movimientos.nuevo') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo Movimiento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción</label>
+                        <input type="text" name="descripcion" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="monto" class="form-label">Monto</label>
+                        <input type="number" step="0.01" name="monto" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tipo" class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select" required>
+                            <option value="ingreso">Ingreso</option>
+                            <option value="gasto">Gasto</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="moneda" class="form-label">Moneda</label>
+                        <select name="moneda" class="form-select" required>
+                            <option value="ARS">ARS</option>
+                            <option value="USD">USD</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary">Guardar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
-
-<table class="table table-striped mt-3">
-  <thead class="table-light">
-    <tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Monto</th><th>Moneda</th><th>Medio</th></tr>
-  </thead>
-  <tbody>
-    {% for m in movimientos %}
-    <tr>
-      <td>{{ m.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
-      <td>{{ m.tipo }}</td>
-      <td>{{ m.descripcion }}</td>
-      <td>${{ '%.2f'|format(m.monto) }}</td>
-      <td>{{ m.moneda }}</td>
-      <td>{{ m.medio_pago }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="6" class="text-center">No hay movimientos este mes.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<h6>Últimos cierres</h6>
-<table class="table table-sm">
-  <thead><tr><th>Mes</th><th>Año</th><th>Ingresos ARS</th><th>Gastos ARS</th><th>Saldo ARS</th><th>Ingresos USD</th><th>Gastos USD</th><th>Saldo USD</th></tr></thead>
-  <tbody>
-    {% for c in cierres %}
-    <tr>
-      <td>{{ c.mes }}</td><td>{{ c.anio }}</td>
-      <td>{{ '%.2f'|format(c.total_ingresos_ars) }}</td><td>{{ '%.2f'|format(c.total_gastos_ars) }}</td><td>{{ '%.2f'|format(c.saldo_ars) }}</td>
-      <td>{{ '%.2f'|format(c.total_ingresos_usd) }}</td><td>{{ '%.2f'|format(c.total_gastos_usd) }}</td><td>{{ '%.2f'|format(c.saldo_usd) }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="8" class="text-center">No hay cierres aún.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
 {% endblock %}
